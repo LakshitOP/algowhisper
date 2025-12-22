@@ -1,0 +1,5 @@
+{
+  "name": "Copy of AlgoWhisperer",
+  "description": "An AI-powered assistant that simplifies competitive programming problems, generates solutions, and creates edge-case tests using Google Gemini.",
+  "requestFramePermissions": []
+}
