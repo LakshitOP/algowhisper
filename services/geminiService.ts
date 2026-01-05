@@ -1,9 +1,10 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { ResultType } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// Using gemini-3-pro-preview for complex reasoning and coding tasks as per guidelines
+// Using gemini-3-pro-preview for complex reasoning and coding tasks
 const MODEL_NAME = 'gemini-3-pro-preview';
 
 export interface GeminiResponse {
@@ -16,7 +17,18 @@ export const generateAnalysis = async (
   type: ResultType,
   language?: string
 ): Promise<GeminiResponse> => {
-  let systemInstruction = "You are an expert competitive programming assistant. Your goal is to help users understand algorithms, write code, and debug efficiently.";
+  // Ultra-strict system instruction to abolish LaTeX/Math-mode
+  let systemInstruction = `You are an expert competitive programming assistant. 
+  
+  CRITICAL FORMATTING RULES:
+  1. NEVER use LaTeX, dollar signs ($), or any math-mode formatting.
+  2. Render all mathematical expressions, variables, and indices as standard PLAIN TEXT.
+  3. Example of WRONG: $a_i$, $O(N \log N)$, $10^5$, $x^2$.
+  4. Example of CORRECT: a[i], O(N log N), 100,000 or 10^5 (plain text), x^2 (plain text).
+  5. Use square brackets for indices: a[i][j].
+  6. Use standard caret ^ for powers in plain text: 2^n.
+  7. Use beautiful, well-structured Markdown with clear headers and lists.`;
+  
   let prompt = "";
 
   if (type === ResultType.ELI5) {
@@ -24,10 +36,10 @@ export const generateAnalysis = async (
       I have a coding problem located at this URL: ${url}
       
       Please perform the following steps:
-      1. Use Google Search to retrieve the full problem description, constraints, and examples from the provided URL.
-      2. Once you have the context, explain the problem to me as if I am a 5-year-old. 
-      3. Use simple analogies (like toys, playgrounds, or animals) to explain the core logic.
-      4. Avoid jargon. Keep it fun and very easy to understand.
+      1. Use Google Search to retrieve the full problem description and constraints.
+      2. Explain the problem as if I am a 5-year-old using analogies.
+      3. Structure: # The Big Idea, ## What's the Goal?, ## The Rules, ## Let's Imagine.
+      4. Use plain text for all variables and numbers.
     `;
   } else if (type === ResultType.SOLUTION) {
     if (!language) throw new Error("Language is required for solution generation");
@@ -35,21 +47,22 @@ export const generateAnalysis = async (
       I have a coding problem located at this URL: ${url}
       
       Please perform the following steps:
-      1. Use Google Search to retrieve the full problem description and constraints from the provided URL.
-      2. Generate a complete, optimized solution in ${language}.
-      3. Include comments explaining the time and space complexity.
-      4. Ensure the code handles edge cases described in the constraints.
-      5. Wrap the code block in markdown like \`\`\`${language.toLowerCase()} ... \`\`\`.
+      1. Use Google Search to retrieve the full problem description.
+      2. Provide:
+         - # Approach Overview
+         - ## Complexity Analysis (Strictly plain text: e.g., Time: O(N), Space: O(1))
+         - # Optimized Solution (The code)
+      3. Generate optimized code in ${language}.
+      4. Use plain text for all mathematical logic in the explanation. No dollar signs.
     `;
   } else if (type === ResultType.TEST_CASES) {
     prompt = `
       I have a coding problem located at this URL: ${url}
       
-      Please perform the following steps:
-      1. Use Google Search to retrieve the full problem description and strictly analyze the constraints from the provided URL.
-      2. Generate 10 "nasty" test cases. These should be edge cases (e.g., minimum/maximum constraints, empty inputs, negative numbers, etc.) that often cause solutions to fail.
-      3. Format the output as a clear list. 
-      4. For each test case, briefly explain WHY it is a nasty case (e.g., "Max integer overflow possibility").
+      Please analyze the constraints and provide:
+      - # Nasty Test Scenarios
+      - A table of 10 edge cases with Input and Logic.
+      - Use plain text for all indices and variable names in the table (e.g. a[0], n-1).
     `;
   }
 
@@ -60,11 +73,10 @@ export const generateAnalysis = async (
       config: {
         tools: [{ googleSearch: {} }],
         systemInstruction: systemInstruction,
-        temperature: 0.5, // Balance between creativity and precision
+        temperature: 0.2, // Lowered for stricter formatting adherence
       },
     });
 
-    // Extract grounding chunks if available
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     const sources: { uri: string; title: string }[] = [];
 
@@ -79,7 +91,6 @@ export const generateAnalysis = async (
       }
     }
 
-    // Remove duplicates based on URI
     const uniqueSources = Array.from(new Map(sources.map(s => [s.uri, s])).values());
 
     return {
@@ -88,6 +99,6 @@ export const generateAnalysis = async (
     };
   } catch (error) {
     console.error("Gemini API Error:", error);
-    throw new Error("Failed to process the request. Please ensure the URL is correct and accessible.");
+    throw new Error("Failed to process the request. Ensure the URL is accessible.");
   }
 };

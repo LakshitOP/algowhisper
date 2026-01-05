@@ -1,3 +1,4 @@
+
 export enum Platform {
   LEETCODE = 'LeetCode',
   CODEFORCES = 'Codeforces',
@@ -11,10 +12,11 @@ export enum ResultType {
   TEST_CASES = 'Test Cases'
 }
 
+// Updated sources structure to correctly handle Google Search grounding objects (uri and title)
 export interface AnalysisResult {
   type: ResultType;
   content: string;
-  sources?: string[];
+  sources?: { uri: string; title: string }[];
 }
 
 export enum SupportedLanguage {
